@@ -112,3 +112,93 @@ app.get("/users/:userId", (req, res) => {
       res.status(500)._construct({ message: "Error retrieving users" });
     });
 });
+
+//endpoint to send a request to a user
+app.post("/friend-request", async (req, res) => {
+  const { currentUserId, selectedUserId } = req.body;
+
+  try {
+    //update the recepient 's friendsRequestsArray!
+    await User.findByIdAndUpdate(selectedUserId, {
+      $push: { friendRequests: currentUserId },
+    });
+
+    //update the sender's sentFriendRequesst array
+    await User.findByIdAndUpdate(currentUserId, {
+      $push: { sentFriendRequest: selectedUserId },
+    });
+
+    res.sendStatus(200);
+  } catch (error) {
+    res.sendStatus(500);
+  }
+});
+
+//endpoint to show all the friend-requests of a particular user
+
+app.get("/friend-request/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    //fetch the user document based on the User id
+    const user = await User.findById(userId)
+      .populate("friendRequests", "name email image")
+      .lean();
+
+    const friendRequests = user.friendRequests;
+
+    res.json(friendRequests);
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "Inrernal Server Error" + error + req.params });
+  }
+});
+
+//endpoint to accept a friend-accept of a particular person
+
+app.post("/friend-request/accept", async (req, res) => {
+  try {
+    const { senderId, recepientId } = req.body;
+
+    //retrieve the documents of sender and the recipent
+    const sender = await User.findById(senderId);
+    const recepient = await User.findById(recepientId);
+
+    sender.friends.push(recepientId);
+    recepient.friends.push(senderId);
+
+    recepient.friendRequests = recepient.friendRequests.filter(
+      (request) => request.toString() !== senderId.toString()
+    );
+    sender.sentFriendRequest = sender.sentFriendRequest.filter(
+      (request) => request.toString() !== recepientId.toString()
+    );
+
+    await sender.save();
+    await recepient.save();
+
+    res.status(200).json({ message: "Friend request accepted successfully" });
+  } catch (error) {
+    console.log(eeror);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+//endpoint to access all the friends of the logged in user!
+app.get("/accepted-friends/:userId", async(req,res)=>{
+  try{
+    const {userId} = req.params;
+    const user = await User.findById(userId).populate(
+      "friends", "name email image"
+    )
+    const acceptedFriends = user.friends;
+    res.json(acceptedFriends)
+
+  }catch(error){
+    console.log(error);
+    res.status(500).json({message:"Internal Server Error"})
+  }
+})

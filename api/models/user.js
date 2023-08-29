@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-  sentFriendRequests: [
+  sentFriendRequest: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
